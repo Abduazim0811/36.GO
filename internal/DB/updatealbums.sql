@@ -1,1 +1,0 @@
-UPDATE albums SET title=$1, artist=$2, year=$3 WHERE id=$4;

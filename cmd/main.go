@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -25,20 +24,17 @@ func main() {
 	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", "localhost", 5432, "postgres", "Abdu0811", "project")
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		fmt.Println("error")
 		log.Fatal(err)
 	}
-	defer db.Close()
-	name :="../internal/DB/createalbums.sql"
-	filename,err:=os.ReadFile(name)
-	if err!=nil{
+	_, err = db.Exec(`CREATE TABLE albums (
+		id SERIAL PRIMARY KEY,
+		title TEXT,
+		artist TEXT,
+		year INT
+	);`)
+	if err != nil {
 		log.Fatal(err)
 	}
-	_,err=db.Exec(string(filename))
-	if err!=nil{
-		log.Fatal(err)
-	}
-
 
 	router := gin.Default()
 
@@ -54,12 +50,7 @@ func main() {
 }
 
 func getAlbums(c *gin.Context) {
-	name:="../internal/DB/selectalbums.sql"
-	filename,err:=os.ReadFile(name)
-	if err!=nil{
-		log.Fatal(err)
-	}
-	rows, err := db.Query(string(filename))
+	rows, err := db.Query("SELECT * FROM albums")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -80,12 +71,7 @@ func getAlbums(c *gin.Context) {
 
 func getAlbumByID(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	name:="../internal/DB/insertinto.sql"
-	sqlfile,err:=os.ReadFile(name)
-	if err!=nil{
-		log.Fatal(err)
-	}
-	row := db.QueryRow(string(sqlfile), id)
+	row := db.QueryRow("SELECT * FROM albums WHERE id = $1", id)
 
 	var album Album
 	if err := row.Scan(&album.ID, &album.Title, &album.Artist, &album.Year); err != nil {
@@ -102,12 +88,8 @@ func createAlbum(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	name:="../internal/DB/insertinto.sql"
-	sqlfile,err:=os.ReadFile(name)
-	if err!=nil{
-		log.Fatal(err)
-	}
-	_, err = db.Exec(string(sqlfile),
+
+	_, err := db.Exec("INSERT INTO albums (title, artist, year) VALUES ($1, $2, $3)",
 		album.Title, album.Artist, album.Year)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -124,12 +106,9 @@ func updateAlbum(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	name:="../internal/DB/deletealbums.sql"
-	sqlfile,err:=os.ReadFile(name)
-	if err!=nil{
-		log.Fatal(err)
-	}
-	_, err = db.Exec(string(sqlfile),album.Title, album.Artist, album.Year, id)
+
+	_, err := db.Exec("UPDATE albums SET title=$1, artist=$2, year=$3 WHERE id=$4",
+		album.Title, album.Artist, album.Year, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -140,12 +119,7 @@ func updateAlbum(c *gin.Context) {
 
 func deleteAlbum(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	name:="../internal/DB/deletealbums.sql"
-	sqlfile,err:=os.ReadFile(name)
-	if err!=nil{
-		log.Fatal(err)
-	}
-	_, err = db.Exec(string(sqlfile),id)
+	_, err := db.Exec("DELETE FROM albums WHERE id=$1", id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
