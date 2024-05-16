@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS albums(id serial primary key,title Varchar(50), artist Varchar(50),year int);
